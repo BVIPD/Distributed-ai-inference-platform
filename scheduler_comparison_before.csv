@@ -1,0 +1,5 @@
+algorithm,scenarios,mean_estimated_cost,min_estimated_cost,max_estimated_cost,worker_1_selections,worker_2_selections,worker_3_selections,decision_time_ms
+round_robin,1000,3.9644,0.55,8.85,334,333,333,0.646
+queue_only,1000,3.5938,0.5,8.15,405,310,285,0.689
+resource_only,1000,3.2256,0.35,7.55,404,306,290,0.699
+adaptive,1000,2.8699,0.35,6.75,373,295,332,0.972

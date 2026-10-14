@@ -1,0 +1,48 @@
+﻿# Python generated files
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Secrets and local environment settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Local backups and temporary files
+*.bak
+*.backup
+*.pre_*_backup
+*.tmp
+*.log
+
+# Model weights (download separately; do not commit large binaries)
+*.gguf
+*.onnx
+
+# Local editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local Kubernetes troubleshooting patches
+/metrics-patch.json
+/metrics-port-patch.json
+/metrics-restore.json
+
+# Historical project backup
+/backup_20261014/
+
+# Local Kubernetes status snapshot
+/development_v3/kubernetes-v3-status.txt

@@ -1,0 +1,4 @@
+model,request,latency_ms,success,worker,error
+bert,1,143.26,True,worker-1,
+yolo,1,339.32,True,worker-1,
+llama,1,2157.17,True,worker-1,

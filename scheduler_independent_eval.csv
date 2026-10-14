@@ -1,0 +1,5 @@
+algorithm,scenarios,mean_estimated_completion_units,worker_1_selections,worker_2_selections,worker_3_selections
+round_robin,1000,2.8173,334,333,333
+queue_only,1000,2.336,405,310,285
+resource_only,1000,2.6384,404,306,290
+adaptive,1000,2.4557,373,295,332

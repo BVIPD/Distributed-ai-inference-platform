@@ -1,0 +1,5 @@
+policy,repeats,mean_decision_ms,median_decision_ms,max_decision_ms
+round_robin,1000,0.000483,0.0004,0.0075
+queue_only,1000,0.001652,0.0016,0.0228
+resource_only,1000,0.001636,0.0015,0.0243
+adaptive,1000,0.002696,0.0025,0.032
