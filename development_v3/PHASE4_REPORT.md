@@ -1,4 +1,4 @@
-# Phase 4 — Scheduling Evaluation and Benchmarks
+# Phase 4 â€” Scheduling Evaluation and Benchmarks
 
 ## Real-model inference benchmark
 
@@ -41,10 +41,10 @@ Detailed results: `scheduler_v3_overhead.csv`
 - Inference measurements were sequential and used one worker.
 - Scheduler scenarios and proxy costs were synthetic.
 - Local scheduler timing excludes HTTP, networking, and inference.
-- Multi-worker scheduling across independently running workers has not been validated.
+- Multi-worker routing validation was completed in Phase 5; see the results below.
 - Kubernetes deployment and inference validation are documented in Phase 5.
 
-## Phase 5 — Kubernetes Deployment and Validation
+## Phase 5 â€” Kubernetes Deployment and Validation
 
 ### Deployment
 
@@ -73,19 +73,19 @@ Detailed results: `scheduler_v3_overhead.csv`
 - Target CPU utilization: 70%.
 - The HPA reported valid CPU metrics and a desired replica count.
 - The final snapshot showed CPU utilization of 1% of the requested CPU.
-- Scale-out from one worker to two workers was not demonstrated.
-- A deliberate load test was deferred because Windows reported only 2.68 GiB of free RAM.
-- HPA configuration and metrics are not proof of successful scale-out under load.
+- A controlled test sent 60 BERT requests through the v3 gateway; all 60 succeeded.
+- HPA CPU reached 371% against the 70% target, and Kubernetes created a second worker replica; both replicas became Ready.
+- After the load subsided, CPU returned to 1%; the HPA retained two replicas at the final check.
 
 ### Phase 5 limitations
 
-- The deployed v3 scheduler has one configured worker and uses synthetic worker metrics.
-- Routing among multiple independently running workers has not been demonstrated.
-- Actual HPA scale-out and multi-replica inference have not been tested.
-- Scheduler comparisons use synthetic scenarios and proxy costs, not real production workload measurements.
+- The gateway was configured with independently identified worker-1 and worker-2 endpoints.
+- A 20-request BERT routing test completed successfully: worker-1 was selected 11 times and worker-2 9 times.
+- HPA scale-out from one to two ready replicas was observed under controlled load.
+- Scheduler metrics remain synthetic; live-metric scheduling and production-scale behavior are not validated.
 
 ## Overall status
 
 - Phase 4 benchmark and synthetic scheduling experiments are documented.
 - Phase 5 v3.1 deployment and BERT, YOLO, and TinyLlama inference validation are complete.
-- Multi-worker routing and scale-out under load remain future validation tasks.
+- HPA scale-out and multi-worker routing have been validated in the local Docker Desktop Kubernetes environment. Live-metric scheduling and production-scale behavior remain future work.
