@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ai-inference-gateway-v3
@@ -19,8 +19,10 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: WORKER_1_URL
-              value: http://ai-inference-worker-v3:8000
+            - name: WORKER_IDS
+              value: "worker-1,worker-2"
+            - name: WORKER_URLS
+              value: "worker-1=http://ai-inference-worker-v3:8000,worker-2=http://ai-inference-worker-v3-2:8000"
           resources:
             requests:
               cpu: 100m
@@ -88,4 +90,69 @@ spec:
   ports:
     - port: 8000
       targetPort: 8000
-
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-inference-worker-v3-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-inference-worker-v3-2
+  template:
+    metadata:
+      labels:
+        app: ai-inference-worker-v3-2
+    spec:
+      containers:
+        - name: worker
+          image: ai-inference-platform:dev3.1
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "uvicorn"]
+          args: ["worker_api:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000
+          env:
+            - name: WORKER_ID
+              value: worker-2
+            - name: OMP_NUM_THREADS
+              value: "2"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-inference-worker-v3-2
+spec:
+  type: ClusterIP
+  selector:
+    app: ai-inference-worker-v3-2
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-inference-worker-v3
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-inference-worker-v3
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

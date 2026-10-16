@@ -133,7 +133,7 @@ The model artifacts must be present before building because the Dockerfile copie
 
 ## Deploy to Kubernetes
 
-The supplied v3.1 manifest uses the local image tag `ai-inference-platform:dev3.1`.
+The v3.1 manifest defines the gateway, two independent workers, their Services, and the worker HPA. It does not modify the original v2 Deployment or HPA.
 
 First confirm the active Kubernetes context:
 
@@ -147,7 +147,8 @@ Then apply the manifest:
 ```powershell
 kubectl apply -f .\development_v3\kubernetes-v3.1.yaml
 kubectl rollout status deployment/ai-inference-gateway-v3
-kubectl rollout status deployment/ai-inference-worker-v3
+kubectl rollout status deployment/ai-inference-worker-v3 --timeout=120s
+kubectl rollout status deployment/ai-inference-worker-v3-2 --timeout=120s
 kubectl get deployments,services,hpa,pods
 ```
 
@@ -231,7 +232,7 @@ The scheduler comparison uses seeded synthetic scenarios and proxy costs, not me
 - Worker HPA configured with a minimum of one and maximum of two replicas, targeting 70% CPU utilization.
 - HPA scale-out was observed during a controlled test: CPU reached 371% against the 70% target, and the worker Deployment increased from one to two ready replicas.
 - A 60-request BERT load test completed with 60/60 successful responses.
-- Multi-worker routing was validated across independent worker-1 and worker-2 Deployments: 20/20 requests succeeded, with 11 selections of worker-1 and 9 of worker-2.
+- Multi-worker routing was revalidated after applying the main manifest: 20/20 requests succeeded, with 9 selections of worker-1 and 11 of worker-2.
 - The current scheduler uses synthetic worker metrics rather than live queue and resource measurements.
 
 These limitations are part of the current implementation status and should not be interpreted as completed production capabilities.
