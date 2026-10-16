@@ -1,6 +1,6 @@
  <div align="center">
 
-# Distributed Multi-Model AI Inference Platform
+# Distributed Multi-Model AI Inference Fabric
 
 ### A Cloud-Native Platform for Heterogeneous AI Inference, Worker Scheduling, and Kubernetes Autoscaling
 
