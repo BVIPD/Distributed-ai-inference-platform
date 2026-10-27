@@ -1,20 +1,33 @@
-﻿
 import base64
 import binascii
 import os
 import tempfile
+import time
 from io import BytesIO
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from prometheus_client import Counter, Histogram, make_asgi_app
 from pydantic import BaseModel
 from PIL import Image, UnidentifiedImageError
 
 from models import bert_model, llama_model, yolo_model
 
-app = FastAPI(title="AI Inference Worker", version="1.2.0")
+app = FastAPI(title="AI Inference Worker", version="1.3.0")
 
 WORKER_ID = os.getenv("WORKER_ID", "worker-1")
 SUPPORTED_MODELS = {"bert", "yolo", "llama"}
+
+WORKER_INFERENCES = Counter(
+    "worker_inference_requests_total",
+    "Inference requests processed by this worker",
+    ["worker_id", "model", "status"],
+)
+
+WORKER_INFERENCE_DURATION = Histogram(
+    "worker_inference_duration_seconds",
+    "Worker-side inference duration in seconds",
+    ["worker_id", "model"],
+)
 
 
 class WorkerRequest(BaseModel):
@@ -35,14 +48,16 @@ def health():
 @app.post("/execute")
 def execute(request: WorkerRequest):
     model = request.model.strip().lower()
-
-    if model not in SUPPORTED_MODELS:
-        raise HTTPException(
-            status_code=400,
-            detail="Supported models: bert, yolo, llama.",
-        )
+    start = time.perf_counter()
+    status = "error"
 
     try:
+        if model not in SUPPORTED_MODELS:
+            raise HTTPException(
+                status_code=400,
+                detail="Supported models: bert, yolo, llama.",
+            )
+
         if model == "bert":
             result = bert_model(
                 request.text or "This platform is working great!"
@@ -96,6 +111,8 @@ def execute(request: WorkerRequest):
                 if image_path and os.path.exists(image_path):
                     os.unlink(image_path)
 
+        status = "success"
+
         return {
             "worker_id": WORKER_ID,
             "result": result,
@@ -104,13 +121,25 @@ def execute(request: WorkerRequest):
 
     except HTTPException:
         raise
+
     except ValueError as exc:
         raise HTTPException(
             status_code=400,
             detail=str(exc),
         ) from exc
+
     except RuntimeError as exc:
         raise HTTPException(
             status_code=500,
             detail=str(exc),
         ) from exc
+
+    finally:
+        WORKER_INFERENCES.labels(WORKER_ID, model, status).inc()
+        WORKER_INFERENCE_DURATION.labels(
+            WORKER_ID,
+            model,
+        ).observe(time.perf_counter() - start)
+
+
+app.mount("/metrics", make_asgi_app())

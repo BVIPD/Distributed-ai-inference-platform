@@ -8,7 +8,7 @@ ENV OMP_NUM_THREADS=2
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py router.py scheduler.py models.py worker_api.py ./
+COPY main.py router.py scheduler.py models.py model_registry.py worker_api.py ./
 COPY models/ ./models/
 
 EXPOSE 8000

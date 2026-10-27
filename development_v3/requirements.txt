@@ -6,3 +6,6 @@ numpy<2.3
 Pillow
 tokenizers
 llama-cpp-python==0.3.36
+
+redis>=5.0,<7.0
+prometheus-client>=0.20,<1.0

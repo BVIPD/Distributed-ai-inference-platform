@@ -46,3 +46,11 @@ Thumbs.db
 
 # Local Kubernetes status snapshot
 /development_v3/kubernetes-v3-status.txt
+
+# Temporary development backups
+*.backup-*
+*.backup
+
+# Historical scheduler backups
+/development_v3/scheduler.py.pre_mult_worker_backup
+/development_v3/scheduler.py.pre_worker_backup
