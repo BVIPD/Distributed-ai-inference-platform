@@ -1,76 +1,159 @@
+ <div align="center">
+
 # Distributed Multi-Model AI Inference Fabric
 
-A cloud-native platform for serving heterogeneous AI models through a common API gateway, adaptive scheduling, containerized inference workers, and Kubernetes orchestration.
+### A Cloud-Native Platform for Heterogeneous AI Inference, Worker Scheduling, and Kubernetes Autoscaling
 
-## 1. Project Overview
+<p>
+  <img src="https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white" alt="Python 3.10">
+  <img src="https://img.shields.io/badge/FastAPI-Gateway-009688?logo=fastapi" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Docker-Containers-2496ED?logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Kubernetes-Orchestration-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
+  <img src="https://img.shields.io/badge/ONNX_Runtime-Inference-7B61FF" alt="ONNX Runtime">
+</p>
 
-This project provides a unified inference platform for three AI workloads:
+**Research focus:** Heterogeneous Model Serving · Worker Scheduling · Multi-Model Inference · Cloud-Native Orchestration
 
-- **DistilBERT:** Sentiment classification using ONNX Runtime.
-- **YOLOv8n:** Object detection using ONNX Runtime.
-- **TinyLlama 1.1B:** Text generation using llama.cpp.
+[Architecture](#system-architecture) · [Experiments](#experimental-results) · [Deployment](#deployment) · [Reproducibility](#reproducibility) · [Future Work](#limitations-and-future-work)
 
-The FastAPI gateway accepts inference requests and routes them through the scheduling layer to inference workers. Redis provides queue and result support, while Kubernetes manages application deployments and autoscaling.
+</div>
 
-Prometheus and Grafana support monitoring and visualization.
+---
 
-## 2. Architecture
+## Abstract
 
-```text
-                         Client
-                           |
-                           v
-                   FastAPI API Gateway
-                           |
-                           v
-                    Adaptive Scheduler
-                           |
-                           v
-                      Worker Router
-                           |
-              +------------+------------+
-              |            |            |
-              v            v            v
-           DistilBERT     YOLOv8n     TinyLlama
-             ONNX          ONNX       llama.cpp
-              |            |            |
-              +------------+------------+
-                           |
-                           v
-                   Inference Response
+Serving heterogeneous artificial intelligence models through a shared inference platform introduces challenges in request routing, computational cost, resource allocation, and workload management. Different model families have different execution characteristics, making a common serving interface and an explicit worker-selection policy important systems-design considerations.
 
-                Kubernetes Orchestration
-                           |
-              +------------+------------+
-              |            |            |
-              v            v            v
-           Deployments   Services      HPA
+This project implements a cloud-native multi-model inference platform integrating a FastAPI gateway, a scheduling and routing layer, independent inference workers, containerized model runtimes, and Kubernetes orchestration. The platform supports three workloads: DistilBERT sentiment classification, YOLOv8n object detection, and TinyLlama text generation.
 
-              +------------+------------+
-              |                         |
-              v                         v
-           Prometheus                Grafana
+The implementation provides an experimental environment for evaluating inference latency, request completion, worker distribution, and horizontal scaling. Initial validation demonstrates successful execution of all three model workloads and routing across multiple workers. Scheduler-policy evaluation currently uses seeded synthetic scenarios and proxy costs; these results are preliminary and do not establish real-world scheduling superiority.
 
-                     Redis
-              Queue/result support
-```
+## Research Motivation
 
-## 3. Technology Stack
+### Problem Statement
 
-| Component | Technology |
+A shared inference service must accommodate workloads with different input formats, execution characteristics, and resource requirements. This creates several practical challenges:
+
+- **Workload heterogeneity:** Serving text classification, object detection, and text generation through a common interface.
+- **Worker selection:** Choosing an appropriate inference worker for incoming requests.
+- **Resource management:** Coordinating inference workers and Kubernetes-based scaling.
+- **Experimental evaluation:** Comparing scheduling policies reproducibly without confusing synthetic estimates with measured system behavior.
+
+### Research Question
+
+> How do different worker-selection policies affect request distribution and estimated scheduling cost in a cloud-native platform serving heterogeneous AI workloads, and how can Kubernetes autoscaling support its deployment?
+
+The current implementation provides a platform for investigating this question. Establishing scheduling effectiveness requires controlled experiments using measured runtime conditions and comparable baselines.
+
+## Research Objectives
+
+1. Develop a unified API for serving heterogeneous AI models.
+2. Integrate a scheduler and worker router between the gateway and inference workers.
+3. Deploy the platform using Docker and Kubernetes.
+4. Measure inference latency and request completion for supported workloads.
+5. Examine worker distribution and observed horizontal scaling.
+6. Compare scheduling policies using reproducible scenarios and document their limitations.
+
+## System Architecture
+
+The platform separates request handling, worker selection, model execution, and infrastructure orchestration.
+
+<p align="center">
+  <img src="development_v3/Architecture.png" alt="Conceptual system architecture showing client applications, FastAPI gateway, request scheduler, worker router, two inference workers, supported models, and Kubernetes autoscaling." width="100%">
+</p>
+
+<p align="center">
+  <em>Figure 1. Conceptual architecture of the Distributed Multi-Model AI Inference Fabric. Model availability and execution depend on the deployed worker configuration.</em>
+</p>
+
+### Architecture Components
+
+| Component | Responsibility |
 |---|---|
-| API gateway | Python, FastAPI, Uvicorn |
-| Sentiment classification | DistilBERT, ONNX Runtime |
-| Object detection | YOLOv8n, ONNX Runtime |
-| Text generation | TinyLlama, llama.cpp |
-| Scheduling | Adaptive scheduling and worker routing |
-| Queue and results | Redis |
-| Containerization | Docker |
-| Orchestration | Kubernetes |
-| Autoscaling | Kubernetes Horizontal Pod Autoscaler |
-| Monitoring | Prometheus and Grafana |
+| FastAPI Gateway | Accepts inference requests and returns model responses |
+| Request Scheduler | Evaluates the configured worker-selection policy |
+| Worker Router | Routes requests to the selected worker |
+| Inference Workers | Execute supported models using configured runtimes |
+| Docker | Packages application services and model dependencies |
+| Kubernetes | Manages deployments, services, and replicas |
+| Horizontal Pod Autoscaler | Adjusts worker replica count according to the configured CPU utilization target |
 
-## 4. Repository Structure
+## Supported AI Workloads
+
+| Workload | Model | Task | Runtime |
+|---|---|---|---|
+| Text | DistilBERT | Sentiment classification | ONNX Runtime |
+| Vision | YOLOv8n | Object detection | ONNX Runtime |
+| Language Generation | TinyLlama 1.1B | Text generation | llama.cpp |
+
+These workloads provide a starting point for examining heterogeneous model serving. The current evaluation does not establish performance across all model sizes, hardware configurations, or production workloads.
+
+## Technology Stack
+
+- **Application:** Python 3.10, FastAPI, Uvicorn
+- **Inference:** ONNX Runtime, NumPy, Hugging Face tokenizers, `llama-cpp-python`
+- **Containerization:** Docker
+- **Orchestration:** Kubernetes, Deployments, Services, Horizontal Pod Autoscaler
+- **Evaluation:** Python benchmark scripts, CSV artifacts, synthetic scheduler scenarios
+- **Development environment:** Docker Desktop Kubernetes and PowerShell
+
+## Experimental Results
+
+The following results summarize tests performed in the development environment. They are not production performance guarantees.
+
+### 1. Sequential Inference Benchmark
+
+| Model | Requests | Successful | Mean Latency | Median Latency | p95 Latency |
+|---|---:|---:|---:|---:|---:|
+| DistilBERT | 10 | 10 | 74.77 ms | 73.21 ms | 102.89 ms |
+| YOLOv8n | 10 | 10 | 178.75 ms | 162.95 ms | 272.01 ms |
+| TinyLlama | 10 | 10 | 1,930.22 ms | 1,953.18 ms | 2,781.89 ms |
+
+Detailed methodology and results are documented in [`development_v3/PHASE4_REPORT.md`](development_v3/PHASE4_REPORT.md).
+
+These sequential measurements do not characterize sustained throughput or latency under concurrent load.
+
+### 2. Multi-Worker Routing Validation
+
+A post-deployment regression test sent 20 BERT requests through the Kubernetes gateway.
+
+| Metric | Result |
+|---|---:|
+| Requests submitted | 20 |
+| Successful responses | 20 |
+| Failed responses | 0 |
+| Requests routed to worker-1 | 10 |
+| Requests routed to worker-2 | 10 |
+
+All requests completed successfully, with an even worker-selection distribution in this run. This does not guarantee equal distribution for every workload or scheduling condition.
+
+### 3. Kubernetes Autoscaling Validation
+
+The worker Horizontal Pod Autoscaler is configured as follows:
+
+| Setting | Value |
+|---|---:|
+| Minimum replicas | 1 |
+| Maximum replicas | 2 |
+| CPU utilization target | 70% |
+
+During a controlled test, the worker deployment scaled from one replica to two. HPA metrics and worker service endpoints were subsequently verified, and inference continued successfully after scale-out.
+
+This demonstrates observed scale-out behavior in the tested Docker Desktop Kubernetes environment. It does not establish production-scale elasticity or prove that autoscaling reduced end-to-end latency.
+
+### 4. Scheduler Evaluation
+
+The current scheduler comparison uses seeded synthetic scenarios and proxy costs rather than live worker queues, measured resource availability, and real-time inference-cost estimates.
+
+The queue-only policy performed better than the adaptive policy under the evaluated proxy. This preliminary result illustrates that a more complex policy does not necessarily outperform a simpler baseline under a particular evaluation model.
+
+Further experiments should compare policies using measured workloads and actual worker conditions before drawing broader conclusions.
+
+## Reproducibility
+
+The repository contains application code, Kubernetes manifests, benchmark scripts, and experiment artifacts for inspecting and reproducing the documented tests.
+
+### Repository Structure
 
 ```text
 .
@@ -79,22 +162,17 @@ Prometheus and Grafana support monitoring and visualization.
 │   ├── router.py
 │   ├── scheduler.py
 │   ├── models.py
-│   ├── model_registry.py
 │   ├── worker_api.py
 │   ├── Dockerfile
 │   ├── requirements.txt
+│   ├── kubernetes-v3.yaml
 │   ├── kubernetes-v3.1.yaml
-│   ├── worker-deployment-final.yaml
-│   ├── redis.yaml
-│   ├── prometheus.yaml
-│   ├── grafana.yaml
-│   ├── hpa-final-evidence.yaml
-│   ├── metrics-server-patch.yaml
-│   ├── PHASE4_REPORT.md
+│   ├── Architecture.png
 │   ├── benchmark_v3.py
 │   ├── benchmark_v3_repeated.py
 │   ├── scheduler_v3_evaluation.py
 │   ├── scheduler_v3_overhead.py
+│   ├── PHASE4_REPORT.md
 │   └── models/
 ├── main.py
 ├── router.py
@@ -110,177 +188,181 @@ Prometheus and Grafana support monitoring and visualization.
 └── .gitignore
 ```
 
-The root-level files preserve the original prototype. The `development_v3/` directory contains the newer inference implementation and supporting deployment and monitoring configuration.
+The original prototype is preserved separately from the v3 implementation.
 
-## 5. Prerequisites
+### Prerequisites
 
-- Docker Desktop with Kubernetes enabled.
-- `kubectl` configured for the intended Kubernetes cluster.
-- Python 3.10 for local development.
-- Sufficient RAM and disk space for the selected model artifacts.
+- Docker Desktop with Kubernetes enabled
+- `kubectl` configured for the intended cluster
+- Python 3.10 for local development
+- Compatible model artifacts
+- Sufficient RAM and disk space, particularly for TinyLlama
 
-TinyLlama inference can be memory-intensive. Check available system resources before running multiple inference replicas.
+### Model Artifacts
 
-## 6. Model Artifacts
+Model weights are not included in this repository. Obtain compatible artifacts from their official publishers and comply with their licenses.
 
-Model weights are excluded from the Git repository because of their size and licensing considerations.
+Expected directory layout:
 
-The development implementation uses model artifacts such as:
-
-- DistilBERT ONNX model.
-- YOLOv8n ONNX model.
-- TinyLlama GGUF model.
-
-Obtain compatible artifacts from their respective publishers, verify their licenses, and place them at the paths expected by the application.
-
-## 7. Local Development
-
-From the repository root, activate the existing virtual environment and start the development application:
-
-```powershell
-.\venv\Scripts\Activate.ps1
-cd .\development_v3
-pip install -r requirements.txt
-python -m uvicorn main:app --host 127.0.0.1 --port 8002
+```text
+development_v3/models/
+├── distilbert/
+│   ├── config.json
+│   ├── model_quantized.onnx
+│   ├── tokenizer.json
+│   ├── tokenizer_config.json
+│   ├── special_tokens_map.json
+│   └── vocab.txt
+├── yolo/
+│   ├── yolov8n.onnx
+│   └── test_bus.jpg
+└── tinyllama/
+    └── TinyLlama-1.1B-Chat-v1.0-Q2_K.gguf
 ```
 
-The local application uses port `8002` in this example. Ensure required dependencies and model artifacts are available before testing inference.
+Verify that the artifacts match the paths, preprocessing, and output formats expected by the implementation.
 
-### API Endpoints
+## Deployment
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/` | Application information |
-| GET | `/health` | Health status |
-| GET | `/models` | List registered models |
-| GET | `/models/{model_id}` | Retrieve model information |
-| POST | `/infer` | Submit an inference request |
+Run these commands from the repository root in PowerShell.
 
-Request fields depend on the selected model and the API implementation.
+### 1. Build the Docker Image
 
-## 8. Docker Deployment
-
-Build the development image from the `development_v3` directory:
+Ensure the required model artifacts are present before building because the Dockerfile copies the `models/` directory into the image.
 
 ```powershell
-cd .\development_v3
-docker build -t ai-inference-platform:dev3.3 .
+docker build -t ai-inference-platform:dev3.1 .\development_v3
 ```
 
-Ensure the image and its required model artifacts are available to the target container runtime.
-
-The current Kubernetes manifest references the `ai-inference-platform:dev3.3` image. Verify that this image is compatible with the gateway and worker configuration before deploying it to all components.
-
-## 9. Kubernetes Deployment
-
-Check the current Kubernetes context:
+### 2. Verify the Kubernetes Context
 
 ```powershell
 kubectl config current-context
+kubectl get nodes
 ```
 
-From the repository root, review the manifest and apply it to the intended cluster:
+Confirm that the intended cluster is active before applying manifests.
+
+### 3. Apply the v3.1 Manifest
 
 ```powershell
 kubectl apply -f .\development_v3\kubernetes-v3.1.yaml
 ```
 
-Additional manifests provide configuration for Redis, Prometheus, Grafana, worker deployments, and autoscaling. Review each manifest before applying it, especially when resources with the same names already exist.
-
-Check deployment status:
+### 4. Wait for the Deployments
 
 ```powershell
-kubectl get deployments
-kubectl get pods
-kubectl get services
-kubectl get hpa
+kubectl rollout status deployment/ai-inference-gateway-v3 --timeout=120s
+kubectl rollout status deployment/ai-inference-worker-v3 --timeout=120s
+kubectl rollout status deployment/ai-inference-worker-v3-2 --timeout=120s
 ```
 
-### Access the API
-
-For a local Docker Desktop Kubernetes environment, forward the gateway service port:
+Inspect the deployed resources:
 
 ```powershell
-kubectl port-forward service/ai-inference-gateway-v3 8001:8000
+kubectl get deployments,services,hpa,pods
 ```
 
-Keep the port-forward process running. From another terminal, test the endpoints:
+The v3.1 manifest is designed to preserve the original v2 deployment. Review image settings, resource requests, and limits before deploying to another cluster.
+
+## API Usage
+
+The validated local Kubernetes gateway uses NodePort `32089`.
+
+### Health Check
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8001/health
-Invoke-RestMethod http://127.0.0.1:8001/models
+Invoke-RestMethod -Uri "http://localhost:32089/health"
 ```
 
-The gateway is then accessible at `http://127.0.0.1:8001` from the local machine.
+Expected response:
 
-### Monitoring
+```json
+{
+  "status": "ok"
+}
+```
 
-The repository includes Prometheus and Grafana manifests under `development_v3/`.
-
-Use these commands when the corresponding services are deployed:
+### BERT Sentiment Inference
 
 ```powershell
-kubectl port-forward service/prometheus 9090:9090
-kubectl port-forward service/grafana 3000:3000
+$body = @{
+    model = "bert"
+    priority = 5
+    text = "This platform is working well."
+} | ConvertTo-Json -Compress
+
+Invoke-RestMethod `
+    -Uri "http://localhost:32089/infer" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $body
 ```
 
-Keep each port-forward process running while accessing its service.
+### TinyLlama Text Generation
 
-Prometheus collects configured application and worker metrics. Grafana provides dashboards for visualizing configured metrics.
+```powershell
+$body = @{
+    model = "llama"
+    priority = 5
+    text = "Explain Kubernetes in two simple sentences."
+} | ConvertTo-Json -Compress
 
-## 10. Validation Results
+Invoke-RestMethod `
+    -Uri "http://localhost:32089/infer" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $body
+```
 
-The following capabilities were validated during development:
+### YOLO Object Detection
 
-- The Kubernetes gateway returned a healthy status.
-- The model registry reported three registered models and three available artifacts.
-- DistilBERT completed a sentiment classification request.
-- YOLOv8n completed an object detection request.
-- TinyLlama generated text using CPU inference.
-- Prometheus reported the gateway and both worker targets as healthy.
-- Kubernetes worker deployments and the Horizontal Pod Autoscaler were configured.
-- A previous controlled load test recorded successful requests and observed worker autoscaling.
+Use the `yolo` model alias and supply a base64-encoded image in the `image_base64` request field. Refer to `development_v3/models.py` and `development_v3/worker_api.py` for the accepted input and response formats.
 
-These results reflect the development environment and should not be interpreted as a guarantee of performance on other systems.
+Interactive API documentation is available at [`http://localhost:32089/docs`](http://localhost:32089/docs) while the gateway is running.
 
-### Historical Model Benchmark
+## Limitations and Future Work
 
-The following results were recorded during earlier sequential benchmark runs:
+The current implementation is an experimental platform, not a production-ready inference service.
 
-| Model | Mean latency (ms) | Median latency (ms) | P95 latency (ms) |
-|---|---:|---:|---:|
-| DistilBERT | 74.77 | 73.21 | 102.89 |
-| YOLOv8n | 178.75 | 162.95 | 272.01 |
-| TinyLlama | 1930.22 | 1953.18 | 2781.89 |
+### Current Limitations
 
-These are historical measurements, not results from a fresh benchmark. Actual latency depends on hardware, input size, model configuration, concurrency, and system load.
+- **Synthetic scheduling metrics:** The scheduler does not yet rely on a fully validated live measurement pipeline for worker selection.
+- **Preliminary policy evaluation:** Synthetic proxy results cannot establish general scheduling superiority.
+- **Limited workload scale:** The demonstrated setup uses a small number of workers in a local development cluster.
+- **Limited performance evidence:** Sequential latency measurements do not characterize sustained throughput, tail latency under contention, or large-scale concurrency.
+- **Autoscaling scope:** The observed HPA behavior validates a configured CPU-based scale-out path, not an optimized autoscaling policy.
 
-### Scheduler Evaluation
+### Research Directions
 
-The project includes evaluation scripts for round-robin, queue-based, resource-based, and adaptive scheduling strategies.
+1. Integrate live queue depth, worker CPU utilization, and measured inference latency into scheduling decisions.
+2. Compare round-robin, queue-only, resource-aware, and adaptive scheduling baselines.
+3. Run repeated trials with controlled request mixes, concurrency levels, and model combinations.
+4. Report throughput, p50/p95/p99 latency, error rate, scheduling overhead, and resource utilization.
+5. Investigate interactions between scheduling decisions, autoscaling delay, and end-to-end inference performance.
+6. Evaluate whether added scheduling complexity produces measurable benefits over simpler policies.
 
-Some comparisons use synthetic scenarios and proxy-cost calculations. These results are useful for studying scheduler behavior, but they must not be interpreted as live hardware measurements or proof that one scheduling strategy always performs best.
+These experiments would help determine whether the scheduling approach provides benefits beyond simpler baselines.
 
-Refer to `development_v3/PHASE4_REPORT.md` and the evaluation scripts for the methodology and additional results.
+## Project Artifacts
 
-## 11. Limitations and Future Work
+| Artifact | Purpose |
+|---|---|
+| `development_v3/kubernetes-v3.1.yaml` | Multi-worker Kubernetes deployment |
+| `development_v3/benchmark_v3.py` | Sequential benchmark |
+| `development_v3/benchmark_v3_repeated.py` | Repeated benchmark |
+| `development_v3/scheduler_v3_evaluation.py` | Scheduler evaluation |
+| `development_v3/scheduler_v3_overhead.py` | Scheduler overhead evaluation |
+| `development_v3/PHASE4_REPORT.md` | Experimental report and validation details |
 
-Potential improvements include:
+Use the scripts and report together when interpreting results. Confirm experiment settings and saved data before making comparisons.
 
-- Running repeated, statistically controlled benchmarks under concurrent load.
-- Comparing scheduling strategies across multiple workload distributions.
-- Improving resource-aware scheduling using reliable live measurements.
-- Evaluating autoscaling response time and sustained throughput.
-- Expanding monitoring dashboards and operational observability.
-- Testing failure recovery and queue behavior under worker restarts.
-- Improving deployment portability across Kubernetes environments.
+## Conclusion
 
-## 12. Reproducibility
+This project establishes a reproducible cloud-native environment for serving heterogeneous AI workloads through a common gateway and multiple inference workers. The implementation demonstrates successful multi-model inference, worker routing, and Kubernetes HPA scale-out in a local development environment.
 
-Record the Docker image tag, model artifact versions, Kubernetes configuration, and benchmark conditions when reproducing results.
+The main research opportunity is the systematic evaluation of scheduling policies using measured runtime conditions. Establishing a robust adaptive-scheduling contribution requires controlled comparisons against simpler baselines and transparent reporting of performance, overhead, and limitations.
 
-Keep historical benchmarks, synthetic scheduler evaluations, and current live telemetry clearly distinguished in reports.
+## License
 
-## 13. License
-
-Add the project's chosen license before distributing or reusing the implementation. Verify the licenses of the underlying models and dependencies separately.
+No license has been selected yet. Until a license is added, standard copyright restrictions apply.
