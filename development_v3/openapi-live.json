@@ -1,0 +1,257 @@
+{
+    "openapi":  "3.1.0",
+    "info":  {
+                 "title":  "Distributed Multi-Model AI Inference Fabric",
+                 "description":  "Cloud-native multi-model inference gateway with Redis-backed request routing, model registry, and Prometheus monitoring.",
+                 "version":  "3.2.0"
+             },
+    "paths":  {
+                  "/":  {
+                            "get":  {
+                                        "tags":  [
+                                                     "Platform"
+                                                 ],
+                                        "summary":  "Home",
+                                        "operationId":  "home__get",
+                                        "responses":  {
+                                                          "200":  {
+                                                                      "description":  "Successful Response",
+                                                                      "content":  {
+                                                                                      "application/json":  {
+                                                                                                               "schema":  {
+
+                                                                                                                          }
+                                                                                                           }
+                                                                                  }
+                                                                  }
+                                                      }
+                                    }
+                        },
+                  "/health":  {
+                                  "get":  {
+                                              "tags":  [
+                                                           "Platform"
+                                                       ],
+                                              "summary":  "Health",
+                                              "operationId":  "health_health_get",
+                                              "responses":  {
+                                                                "200":  {
+                                                                            "description":  "Successful Response",
+                                                                            "content":  {
+                                                                                            "application/json":  {
+                                                                                                                     "schema":  {
+
+                                                                                                                                }
+                                                                                                                 }
+                                                                                        }
+                                                                        }
+                                                            }
+                                          }
+                              },
+                  "/models":  {
+                                  "get":  {
+                                              "tags":  [
+                                                           "Model Registry"
+                                                       ],
+                                              "summary":  "Models",
+                                              "operationId":  "models_models_get",
+                                              "responses":  {
+                                                                "200":  {
+                                                                            "description":  "Successful Response",
+                                                                            "content":  {
+                                                                                            "application/json":  {
+                                                                                                                     "schema":  {
+
+                                                                                                                                }
+                                                                                                                 }
+                                                                                        }
+                                                                        }
+                                                            }
+                                          }
+                              },
+                  "/models/{model_id}":  {
+                                             "get":  {
+                                                         "tags":  [
+                                                                      "Model Registry"
+                                                                  ],
+                                                         "summary":  "Model Details",
+                                                         "operationId":  "model_details_models__model_id__get",
+                                                         "parameters":  [
+                                                                            {
+                                                                                "name":  "model_id",
+                                                                                "in":  "path",
+                                                                                "required":  true,
+                                                                                "schema":  {
+                                                                                               "type":  "string",
+                                                                                               "title":  "Model Id"
+                                                                                           }
+                                                                            }
+                                                                        ],
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "Successful Response",
+                                                                                       "content":  {
+                                                                                                       "application/json":  {
+                                                                                                                                "schema":  {
+
+                                                                                                                                           }
+                                                                                                                            }
+                                                                                                   }
+                                                                                   },
+                                                                           "422":  {
+                                                                                       "description":  "Validation Error",
+                                                                                       "content":  {
+                                                                                                       "application/json":  {
+                                                                                                                                "schema":  {
+                                                                                                                                               "$ref":  "#/components/schemas/HTTPValidationError"
+                                                                                                                                           }
+                                                                                                                            }
+                                                                                                   }
+                                                                                   }
+                                                                       }
+                                                     }
+                                         },
+                  "/infer":  {
+                                 "post":  {
+                                              "tags":  [
+                                                           "Inference"
+                                                       ],
+                                              "summary":  "Infer",
+                                              "operationId":  "infer_infer_post",
+                                              "requestBody":  {
+                                                                  "content":  {
+                                                                                  "application/json":  {
+                                                                                                           "schema":  {
+                                                                                                                          "$ref":  "#/components/schemas/InferenceRequest"
+                                                                                                                      }
+                                                                                                       }
+                                                                              },
+                                                                  "required":  true
+                                                              },
+                                              "responses":  {
+                                                                "200":  {
+                                                                            "description":  "Successful Response",
+                                                                            "content":  {
+                                                                                            "application/json":  {
+                                                                                                                     "schema":  {
+
+                                                                                                                                }
+                                                                                                                 }
+                                                                                        }
+                                                                        },
+                                                                "422":  {
+                                                                            "description":  "Validation Error",
+                                                                            "content":  {
+                                                                                            "application/json":  {
+                                                                                                                     "schema":  {
+                                                                                                                                    "$ref":  "#/components/schemas/HTTPValidationError"
+                                                                                                                                }
+                                                                                                                 }
+                                                                                        }
+                                                                        }
+                                                            }
+                                          }
+                             }
+              },
+    "components":  {
+                       "schemas":  {
+                                       "HTTPValidationError":  {
+                                                                   "properties":  {
+                                                                                      "detail":  {
+                                                                                                     "items":  {
+                                                                                                                   "$ref":  "#/components/schemas/ValidationError"
+                                                                                                               },
+                                                                                                     "type":  "array",
+                                                                                                     "title":  "Detail"
+                                                                                                 }
+                                                                                  },
+                                                                   "type":  "object",
+                                                                   "title":  "HTTPValidationError"
+                                                               },
+                                       "InferenceRequest":  {
+                                                                "properties":  {
+                                                                                   "model":  {
+                                                                                                 "type":  "string",
+                                                                                                 "title":  "Model",
+                                                                                                 "description":  "Registered model identifier: bert, yolo, or llama."
+                                                                                             },
+                                                                                   "priority":  {
+                                                                                                    "type":  "integer",
+                                                                                                    "maximum":  10.0,
+                                                                                                    "minimum":  1.0,
+                                                                                                    "title":  "Priority",
+                                                                                                    "description":  "Scheduling priority from 1 to 10.",
+                                                                                                    "default":  1
+                                                                                                },
+                                                                                   "text":  {
+                                                                                                "anyOf":  [
+                                                                                                              {
+                                                                                                                  "type":  "string"
+                                                                                                              },
+                                                                                                              {
+                                                                                                                  "type":  "null"
+                                                                                                              }
+                                                                                                          ],
+                                                                                                "title":  "Text"
+                                                                                            },
+                                                                                   "image_base64":  {
+                                                                                                        "anyOf":  [
+                                                                                                                      {
+                                                                                                                          "type":  "string"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "type":  "null"
+                                                                                                                      }
+                                                                                                                  ],
+                                                                                                        "title":  "Image Base64"
+                                                                                                    }
+                                                                               },
+                                                                "type":  "object",
+                                                                "required":  [
+                                                                                 "model"
+                                                                             ],
+                                                                "title":  "InferenceRequest"
+                                                            },
+                                       "ValidationError":  {
+                                                               "properties":  {
+                                                                                  "loc":  {
+                                                                                              "items":  {
+                                                                                                            "anyOf":  [
+                                                                                                                          {
+                                                                                                                              "type":  "string"
+                                                                                                                          },
+                                                                                                                          {
+                                                                                                                              "type":  "integer"
+                                                                                                                          }
+                                                                                                                      ]
+                                                                                                        },
+                                                                                              "type":  "array",
+                                                                                              "title":  "Location"
+                                                                                          },
+                                                                                  "msg":  {
+                                                                                              "type":  "string",
+                                                                                              "title":  "Message"
+                                                                                          },
+                                                                                  "type":  {
+                                                                                               "type":  "string",
+                                                                                               "title":  "Error Type"
+                                                                                           },
+                                                                                  "input":  {
+                                                                                                "title":  "Input"
+                                                                                            },
+                                                                                  "ctx":  {
+                                                                                              "type":  "object",
+                                                                                              "title":  "Context"
+                                                                                          }
+                                                                              },
+                                                               "type":  "object",
+                                                               "required":  [
+                                                                                "loc",
+                                                                                "msg",
+                                                                                "type"
+                                                                            ],
+                                                               "title":  "ValidationError"
+                                                           }
+                                   }
+                   }
+}
