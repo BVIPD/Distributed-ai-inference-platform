@@ -1,313 +1,582 @@
-<div align="center">
+# Distributed Multi-Model AI Inference Platform
 
-# Distributed Multi-Model AI Inference Fabric
+A cloud-native platform for serving heterogeneous AI models through a centralized API gateway, adaptive scheduling, distributed inference workers, Kubernetes orchestration, and real-time monitoring.
 
-**A cloud-native platform for serving heterogeneous AI models with Prometheus-backed scheduling and Kubernetes autoscaling.**
-
-<p>
-  <img src="https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white" alt="Python 3.10">
-  <img src="https://img.shields.io/badge/FastAPI-Gateway-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Docker-Containers-2496ED?logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Kubernetes-Orchestration-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
-  <img src="https://img.shields.io/badge/Prometheus-Monitoring-E6522C?logo=prometheus&logoColor=white" alt="Prometheus">
-  <img src="https://img.shields.io/badge/Grafana-Dashboards-F46800?logo=grafana&logoColor=white" alt="Grafana">
-  <img src="https://img.shields.io/badge/ONNX_Runtime-Inference-7B61FF" alt="ONNX Runtime">
-</p>
-
-[Overview](#overview) Â· [Architecture](#architecture) Â· [Quick Start](#quick-start) Â· [API](#api-usage) Â· [Results](#validation-results) Â· [Limitations](#limitations-and-future-work)
-
-</div>
-
----
+The project demonstrates how multiple AI workloads can be deployed and monitored within a unified infrastructure, with resource-aware request routing and Kubernetes-based autoscaling.
 
 ## Overview
 
-Serving different model families (text, vision, generation) through one platform raises real systems questions: how do you route requests, pick a worker, monitor load, and scale replicas?
+Traditional AI inference systems often deploy different models as separate services, creating challenges in resource utilization, workload distribution, latency management, and scalability.
 
-This project answers them with a single FastAPI gateway in front of a metrics-aware scheduler, a worker router, and independent inference workers, all containerized and orchestrated on Kubernetes.
+This project implements a unified inference platform that supports multiple AI workloads through a common API.
 
-**Highlights**
+The platform integrates:
 
-- **One API, three workloads:** DistilBERT, YOLOv8n, and TinyLlama behind a single `/infer` endpoint.
-- **Prometheus-backed scheduling:** the scheduler reads CPU, memory, latency, and request-rate metrics, and falls back to deterministic round-robin when data is unavailable.
-- **Kubernetes autoscaling:** HPA scales workers on CPU utilization using Metrics Server.
-- **Built-in observability:** Prometheus scraping and Grafana dashboards for the gateway and both workers.
-- **Evidence included:** raw `kubectl` outputs from the final validation run are committed under `evidence/`.
+- A FastAPI inference gateway.
+- A model registry and inference router.
+- An adaptive scheduler with Prometheus-backed worker metrics.
+- Redis for request queuing and result storage.
+- Containerized inference workers.
+- Kubernetes deployments and Horizontal Pod Autoscaling (HPA).
+- Prometheus for metrics collection.
+- Grafana for monitoring and visualization.
 
-> **Scope:** This is an experimental system validated on a local Docker Desktop Kubernetes cluster. The results show functional integration. They do not establish production-scale performance, and they do not prove the adaptive scheduler outperforms simpler policies. See [Limitations](#limitations-and-future-work).
+### Supported AI Models
 
-## Supported Models
+| Model | Task | Runtime |
+|---|---|---|
+| DistilBERT | Sentiment classification | ONNX Runtime |
+| YOLOv8n | Object detection | ONNX Runtime |
+| TinyLlama 1.1B | Text generation | llama.cpp |
 
-| Workload | Model | Task | Runtime |
-|---|---|---|---|
-| NLP | DistilBERT | Sentiment classification | ONNX Runtime |
-| Computer Vision | YOLOv8n | Object detection | ONNX Runtime |
-| Language Generation | TinyLlama 1.1B | Text generation | llama.cpp |
+The models represent different inference workloads, allowing the platform to demonstrate the challenges of routing and managing heterogeneous AI services.
 
 ## Architecture
 
-<p align="center">
-  <img src="development_v3/Architecture.png" alt="Architecture diagram: client, FastAPI gateway, Prometheus-backed scheduler, worker router, two inference workers, Redis, Prometheus, Grafana, Metrics Server, HPA" width="100%">
-</p>
-<p align="center"><em>Figure 1. System architecture.</em></p>
+![Distributed Multi-Model AI Inference Platform Architecture](development_v3/Architecture.png)
 
-### Request flow
+### Request Processing Flow
 
-```mermaid
-flowchart LR
-    C[Client] --> G[FastAPI Gateway]
-    G --> S[Scheduler]
-    S --> R[Worker Router]
-    R --> W1[Worker 1]
-    R --> W2[Worker 2]
-    W1 --> G
-    W2 --> G
-    G --> C
-```
+1. A client submits an inference request to the FastAPI gateway.
+2. The gateway validates the request and identifies the requested model.
+3. The scheduling layer evaluates available worker information.
+4. The router forwards the request to a suitable inference worker.
+5. The selected model performs inference.
+6. The response is returned to the client.
+7. Prometheus collects application and worker metrics, which can be visualized in Grafana.
+8. Kubernetes manages application deployments and can adjust worker replicas through HPA.
 
-1. The client sends a request to the gateway.
-2. The scheduler selects a worker using the configured policy and available metrics.
-3. The router forwards the request to that worker.
-4. The worker runs the model and the result returns through the gateway.
+Redis provides request queueing and result storage as implemented by the application.
 
-### Two metric paths
+## Key Features
 
-| Path | Source | Consumer | Purpose |
-|---|---|---|---|
-| Application metrics | Gateway and workers, scraped by **Prometheus** | Scheduler, Grafana | Worker selection and dashboards |
-| Resource metrics | **Metrics Server** | Kubernetes HPA | CPU-based replica scaling |
+- **Multi-model inference:** Supports sentiment analysis, object detection, and text generation.
+- **Centralized API:** Provides a common entry point for inference requests.
+- **Adaptive scheduling:** Uses worker metrics and scheduling logic to help select an inference worker.
+- **Distributed workers:** Supports multiple worker instances.
+- **Containerization:** Packages application components using Docker.
+- **Kubernetes orchestration:** Deploys and manages the services.
+- **Autoscaling:** Uses Kubernetes HPA to adjust worker replicas according to configured resource targets.
+- **Observability:** Exposes application metrics for Prometheus and Grafana.
+- **Benchmarking:** Includes scripts and CSV results for latency and scheduler experiments.
 
-Prometheus and Metrics Server are complementary, not interchangeable.
+## Technology Stack
 
-### Components
-
-| Component | Role |
+| Component | Technologies |
 |---|---|
-| FastAPI Gateway | Entry point, health and API endpoints |
-| Scheduler | Chooses a worker using metrics and the configured policy |
-| Worker Router | Forwards requests to the selected worker |
-| Inference Workers (Ã—2) | Execute model workloads |
-| Prometheus | Scrapes and serves application metrics |
-| Grafana | Dashboards |
-| Redis | Shared infrastructure service (exact role depends on the active configuration) |
-| Metrics Server | Node and pod resource metrics |
-| HPA | Scales the primary worker deployment on CPU |
-
-## Scheduling
-
-The scheduler queries Prometheus for per-worker:
-
-- CPU usage
-- Memory usage
-- Average inference latency
-- Request rate
-
-If the required CPU or memory data is unavailable, it falls back to deterministic **round-robin**. A successful scheduler test returned `"metrics_source": "prometheus"`, confirming the Prometheus path was used.
-
-A live metric source does not make a policy optimal. Effectiveness must be measured against baselines (see [Future Work](#future-research-directions)).
-
-## Autoscaling
-
-| Setting | Value |
-|---|---:|
-| Min replicas | 1 |
-| Max replicas | 2 |
-| CPU target | 70% |
-
-During testing, the worker deployment scaled from one replica to two and inference requests kept completing.
-
-## Tech Stack
-
-| Category | Technologies |
-|---|---|
-| Application | Python 3.10, FastAPI, Uvicorn |
-| Models | DistilBERT, YOLOv8n, TinyLlama, ONNX Runtime, llama.cpp |
-| Monitoring | Prometheus, Grafana, Kubernetes Metrics Server |
-| Infrastructure | Docker, Kubernetes, HPA, Redis |
-| Evaluation | Python benchmark scripts, CSV artifacts |
-| Dev environment | Docker Desktop Kubernetes, PowerShell |
+| Programming language | Python 3.10 |
+| API gateway | FastAPI, Uvicorn |
+| Sentiment analysis | DistilBERT, ONNX Runtime |
+| Object detection | YOLOv8n, ONNX Runtime |
+| Text generation | TinyLlama 1.1B, llama.cpp |
+| Scheduling | Python, Prometheus-backed worker metrics |
+| Queue and result storage | Redis |
+| Containerization | Docker |
+| Orchestration | Kubernetes |
+| Autoscaling | Kubernetes Horizontal Pod Autoscaler |
+| Monitoring | Prometheus, Grafana |
+| Evaluation | Python benchmark scripts, CSV results, Matplotlib plots |
+| Local environment | Docker Desktop Kubernetes, PowerShell |
 
 ## Repository Structure
 
 ```text
 Distributed-ai-inference-platform/
-â”œâ”€â”€ development_v3/                  # Current implementation
-â”‚   â”œâ”€â”€ main.py                      # FastAPI gateway
-â”‚   â”œâ”€â”€ router.py                    # Worker router
-â”‚   â”œâ”€â”€ scheduler.py                 # Prometheus-backed scheduler
-â”‚   â”œâ”€â”€ models.py                    # Model registry and request schemas
-â”‚   â”œâ”€â”€ worker_api.py                # Inference worker API
-â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”œâ”€â”€ requirements.txt
-â”‚   â”œâ”€â”€ kubernetes-v3.yaml
-â”‚   â”œâ”€â”€ kubernetes-v3.1.yaml
-â”‚   â”œâ”€â”€ metrics-server-patch.yaml
-â”‚   â”œâ”€â”€ worker-deployment-final.yaml
-â”‚   â”œâ”€â”€ hpa-final-evidence.yaml
-â”‚   â”œâ”€â”€ openapi-live.json
-â”‚   â”œâ”€â”€ Architecture.png
-â”‚   â””â”€â”€ models/
-â”œâ”€â”€ evidence/final-20261027-232859/  # Raw kubectl outputs from final validation
-â”œâ”€â”€ main.py, router.py, ...          # Earlier prototype
-â”œâ”€â”€ benchmark.py                     # Latency benchmark (prototype)
-â”œâ”€â”€ scheduler_experiment.py          # Synthetic scheduler comparison
-â”œâ”€â”€ scheduler_independent_eval.py    # Independent scheduler evaluation
-â”œâ”€â”€ *.csv, *.png                     # Benchmark results and plots
-â”œâ”€â”€ deployment.yaml
-â””â”€â”€ README.md
+Göé
+Gö£GöÇGöÇ development_v3/
+Göé   Gö£GöÇGöÇ main.py
+Göé   Gö£GöÇGöÇ router.py
+Göé   Gö£GöÇGöÇ scheduler.py
+Göé   Gö£GöÇGöÇ models.py
+Göé   Gö£GöÇGöÇ model_registry.py
+Göé   Gö£GöÇGöÇ worker_api.py
+Göé   Gö£GöÇGöÇ Dockerfile
+Göé   Gö£GöÇGöÇ requirements.txt
+Göé   Gö£GöÇGöÇ kubernetes-v3.yaml
+Göé   Gö£GöÇGöÇ kubernetes-v3.1.yaml
+Göé   Gö£GöÇGöÇ worker-deployment-final.yaml
+Göé   Gö£GöÇGöÇ hpa-final-evidence.yaml
+Göé   Gö£GöÇGöÇ metrics-server-patch.yaml
+Göé   Gö£GöÇGöÇ redis.yaml
+Göé   Gö£GöÇGöÇ prometheus.yaml
+Göé   Gö£GöÇGöÇ grafana.yaml
+Göé   Gö£GöÇGöÇ openapi-live.json
+Göé   Gö£GöÇGöÇ Architecture.png
+Göé   GööGöÇGöÇ models/
+Göé
+Gö£GöÇGöÇ docs/
+Göé   Gö£GöÇGöÇ inference_latency.png
+Göé   Gö£GöÇGöÇ swagger_api.jpeg
+Göé   Gö£GöÇGöÇ grafana_dashboard.jpeg
+Göé   Gö£GöÇGöÇ prometheus_targets.jpeg
+Göé   Gö£GöÇGöÇ prometheus_up_query.jpeg
+Göé   Gö£GöÇGöÇ gateway_inference_requests.jpeg
+Göé   GööGöÇGöÇ worker_inference_requests.jpeg
+Göé
+Gö£GöÇGöÇ evidence/
+Göé   GööGöÇGöÇ final-20261027-232859/
+Göé
+Gö£GöÇGöÇ benchmark.py
+Gö£GöÇGöÇ benchmark_results.csv
+Gö£GöÇGöÇ scheduler_experiment.py
+Gö£GöÇGöÇ scheduler_independent_eval.py
+Gö£GöÇGöÇ scheduler_comparison.csv
+Gö£GöÇGöÇ scheduler_independent_eval.csv
+Gö£GöÇGöÇ deployment.yaml
+Gö£GöÇGöÇ Dockerfile
+Gö£GöÇGöÇ requirements.txt
+Gö£GöÇGöÇ LICENSE
+GööGöÇGöÇ README.md
 ```
 
-`development_v3/` is the current implementation. Root-level files preserve the earlier prototype and its experiments.
+The `development_v3/` directory contains the newer inference implementation and Kubernetes-related configuration. Root-level files preserve the earlier prototype and supporting experiments.
+
+The repository also includes benchmark artifacts, monitoring screenshots, deployment evidence, and model-related configuration.
+
+*Note: This tree highlights important files rather than listing every repository file. Verify filenames against the actual repository if you reorganize the project.*
+
+## Prerequisites
+
+Before running the platform, install or configure:
+
+- Docker Desktop.
+- Kubernetes enabled in Docker Desktop.
+- `kubectl`.
+- Python 3.10 for local development and benchmark scripts.
+- The model artifacts required by the implementation.
+- Kubernetes Metrics Server for resource metrics and CPU-based HPA.
+- Sufficient CPU and memory for the selected models.
+
+### Model Files
+
+Model weights are not necessarily included in the Git repository. Obtain compatible model artifacts from their respective model publishers or trusted model repositories, and review their licenses before use.
+
+The model files must match the paths and filenames expected by `development_v3/models.py`.
+
+The intended model assets include:
+
+| Model | Required artifact | Notes |
+|---|---|---|
+| DistilBERT | Quantized ONNX model and tokenizer/configuration files | Use a compatible sentiment-classification model |
+| YOLOv8n | `yolov8n.onnx` | Use a compatible YOLOv8n ONNX export |
+| TinyLlama | A compatible TinyLlama GGUF file | Use a quantized GGUF supported by the configured llama.cpp runtime |
+
+A typical model directory may look like this:
+
+```text
+development_v3/
+GööGöÇGöÇ models/
+    Gö£GöÇGöÇ distilbert/
+    Göé   Gö£GöÇGöÇ model_quantized.onnx
+    Göé   Gö£GöÇGöÇ tokenizer.json
+    Göé   GööGöÇGöÇ config.json
+    Gö£GöÇGöÇ yolo/
+    Göé   GööGöÇGöÇ yolov8n.onnx
+    GööGöÇGöÇ tinyllama/
+        GööGöÇGöÇ TinyLlama-1.1B-Chat-v1.0-Q2_K.gguf
+```
+
+**Important:** Treat this as an illustrative layout. Confirm the exact filenames, directories, tokenizer requirements, and model identifiers against the current `development_v3/models.py` and the actual worker configuration before downloading or moving files.
+
+Do not commit large model weights or model files whose redistribution terms do not permit it.
 
 ## Quick Start
 
-### Prerequisites
+The following instructions describe how to inspect and access an existing local Kubernetes deployment. They do not require deleting or recreating the current cluster.
 
-- Docker Desktop with Kubernetes enabled
-- `kubectl` pointed at the intended cluster
-- Python 3.10 (for local development and scripts)
-- Model artifacts placed where the workers expect them (weights may not be in the repo; check licensing)
-- Metrics Server running in the cluster
+### 1. Start Docker Desktop
 
-> **Caution:** Review manifests and image tags before applying anything. Don't apply an older manifest over the working deployment.
+Start Docker Desktop and ensure that its Kubernetes cluster is running.
 
-### 1. Verify the cluster
+Open PowerShell in the repository directory.
+
+Verify the active Kubernetes context:
 
 ```powershell
 kubectl config current-context
 kubectl get nodes
 ```
 
-### 2. Check deployments
+For the tested local environment, the context was `docker-desktop`.
+
+### 2. Check the Deployment
+
+Inspect the current deployments, pods, services, and autoscaler:
 
 ```powershell
 kubectl get deployments,pods,services,hpa
+```
+
+Check the gateway and worker deployments:
+
+```powershell
 kubectl rollout status deployment/ai-inference-gateway-v3 --timeout=120s
 kubectl rollout status deployment/ai-inference-worker-v3 --timeout=120s
 kubectl rollout status deployment/ai-inference-worker-v3-2 --timeout=120s
 ```
 
-### 3. Open the gateway
+These commands inspect rollout status. If a deployment name differs in your environment, obtain the actual name from `kubectl get deployments`.
 
-In a separate terminal (keep it open):
+**Caution:** Review Kubernetes manifests and image tags before applying them. Do not apply an older manifest over a working deployment without first reviewing the changes.
+
+### 3. Access the API Gateway
+
+Open a separate PowerShell terminal and run:
 
 ```powershell
 kubectl port-forward deployment/ai-inference-gateway-v3 8001:8000
 ```
 
-Then:
+Keep this terminal open while using the gateway.
+
+Open the interactive API documentation:
+
+```text
+http://127.0.0.1:8001/docs
+```
+
+Check the health endpoint from another terminal:
 
 ```powershell
 Invoke-RestMethod -Uri "http://127.0.0.1:8001/health"
 ```
 
-Interactive docs: <http://127.0.0.1:8001/docs>
+The health response from the validated environment reported an operational gateway, Redis connectivity, and three registered models with available artifacts.
 
-### 4. Optional: monitoring and autoscaling
+### 4. Access Prometheus
+
+In another PowerShell terminal, forward the Prometheus service or deployment using its actual name:
 
 ```powershell
-# Resource metrics and HPA
-kubectl top pods
-kubectl top nodes
-kubectl describe hpa ai-inference-worker-v3
-kubectl get hpa ai-inference-worker-v3 -w   # watch only; does not generate load
-
-# Prometheus (confirm the deployment name first)
-kubectl port-forward deployment/prometheus 9090:9090   # http://127.0.0.1:9090
-
-# Grafana (confirm the deployment name first)
-kubectl port-forward deployment/grafana 3000:3000      # http://127.0.0.1:3000
+kubectl get services
+kubectl get deployments
 ```
 
-The scheduler running inside the cluster needs an in-cluster Prometheus address, not the host-only port-forward URL.
+For the validated deployment, the following command was used:
 
-Don't expose Redis publicly without network restrictions and authentication.
+```powershell
+kubectl port-forward deployment/prometheus 9090:9090
+```
+
+Open:
+
+```text
+http://localhost:9090
+```
+
+To inspect scrape target health, open:
+
+```text
+http://localhost:9090/targets
+```
+
+To check whether targets are reporting as available, enter this PromQL query:
+
+```promql
+up
+```
+
+The recorded validation showed the gateway, worker-1, and worker-2 targets reporting `1`.
+
+### 5. Access Grafana
+
+Use the configured Grafana port-forward or service to open the Grafana interface.
+
+The validated dashboard was titled **AI Inference Platform** and included panels for:
+
+- Inference requests by model and outcome.
+- Average end-to-end inference duration.
+- Gateway HTTP requests per second.
+- Worker inference requests.
+
+The dashboard depends on Prometheus being configured as a data source and collecting the relevant application metrics.
+
+### 6. Inspect Resource Usage and Autoscaling
+
+Check pod resource metrics:
+
+```powershell
+kubectl top pods
+kubectl top nodes
+```
+
+Inspect the worker autoscaler:
+
+```powershell
+kubectl get hpa
+kubectl describe hpa ai-inference-worker-v3
+```
+
+To watch autoscaler status:
+
+```powershell
+kubectl get hpa ai-inference-worker-v3 -w
+```
+
+The watch command displays changes but does not generate inference load by itself.
+
+The tested HPA configuration used a CPU utilization target of 70%, with a minimum of one replica and a maximum of two replicas. Actual scaling depends on the current workload, resource requests, metrics availability, and configured HPA behavior.
 
 ## API Usage
 
-All inference goes through `POST /infer`. Check field names against `development_v3/models.py` and `openapi-live.json`.
+The platform exposes a FastAPI interface with endpoints for platform health, model discovery, model details, and inference.
 
-**Sentiment (DistilBERT)**
+The interactive Swagger interface is available at:
 
-```powershell
-$body = @{
-    model    = "bert"
-    priority = 5
-    text     = "This platform is working well."
-} | ConvertTo-Json -Compress
-
-Invoke-RestMethod -Uri "http://127.0.0.1:8001/infer" -Method Post `
-    -ContentType "application/json" -Body $body
+```text
+http://127.0.0.1:8001/docs
 ```
 
-**Text generation (TinyLlama)**
+### Main Endpoints
 
-```powershell
-$body = @{
-    model    = "llama"
-    priority = 5
-    text     = "Explain Kubernetes in two simple sentences."
-} | ConvertTo-Json -Compress
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Platform information |
+| GET | `/health` | Health check |
+| GET | `/models` | List registered models |
+| GET | `/models/{model_id}` | Retrieve model details |
+| POST | `/infer` | Submit an inference request |
 
-Invoke-RestMethod -Uri "http://127.0.0.1:8001/infer" -Method Post `
-    -ContentType "application/json" -Body $body
+The exact request schema and available parameters should be inspected in the live Swagger documentation because they depend on the current API implementation.
+
+### Example Workflow
+
+1. Open `/docs`.
+2. Expand `GET /health` and execute the health check.
+3. Expand `GET /models` and inspect the registered models.
+4. Open `POST /infer`.
+5. Select the request schema and enter a valid payload for the desired model.
+6. Execute the request and inspect the returned inference result and execution metadata.
+
+For YOLO inference, provide the image data in the format required by the current request schema. For DistilBERT and TinyLlama, use the corresponding text-input format defined by the API.
+
+Do not assume that all models accept the same input fields.
+
+## Scheduling and Worker Selection
+
+The scheduling layer is responsible for selecting an inference worker for incoming requests.
+
+The current implementation can query Prometheus for worker metrics, including CPU utilization, memory usage, inference latency, and request rate, where the required metrics are available.
+
+These metrics help the scheduler estimate the relative state of available workers.
+
+### Scheduling Workflow
+
+1. Receive the incoming inference request.
+2. Identify the requested model and validate the scheduling parameters.
+3. Retrieve the available worker information.
+4. Query Prometheus for supported worker metrics.
+5. Calculate the worker scores using the configured scheduling logic.
+6. Select a worker and forward the request.
+7. Return the inference response and available scheduling metadata.
+
+The implementation also includes a fallback path when the required live metrics are unavailable. In the tested configuration, the fallback was identified by:
+
+```text
+metrics_source: round_robin_fallback
 ```
 
-**Object detection (YOLOv8n)**
+When the scheduler successfully used the Prometheus-backed metrics path, the response reported:
 
-Use `model = "yolo"` with a base64-encoded image in the `image_base64` field. See `development_v3/models.py` for the exact request and response format.
+```text
+metrics_source: prometheus
+```
+
+These values describe the metrics source used for a scheduling decision; they do not independently prove that one scheduling policy outperforms another.
+
+### Scheduler Evaluation
+
+The repository contains scheduler experiment and evaluation scripts for comparing policies such as:
+
+- Round robin.
+- Queue-only scheduling.
+- Resource-only scheduling.
+- Adaptive scheduling.
+
+The synthetic evaluation results are reported separately from measured model inference benchmarks because they use simulated scenarios and proxy costs rather than actual model execution latency.
+
+## Redis: Request Queue and Result Store
+
+Redis provides request queueing and result storage in the application configuration.
+
+In the implementation described by the deployment and application configuration, requests are represented as queue jobs and results are associated with request identifiers.
+
+The configured Redis setup uses an ephemeral storage model rather than durable job storage. The configuration described for this deployment includes a 64 MB memory limit, an `allkeys-lru` eviction policy, and disabled append-only persistence.
+
+These settings have important operational implications:
+
+- Redis memory is limited.
+- Keys can be evicted under memory pressure.
+- Queued jobs and results should not be treated as permanently stored.
+- Redis restarts may interrupt or lose in-memory work.
+- Redis should not be considered a durable message broker or database without additional persistence and recovery mechanisms.
+
+Review the current Redis manifest and application code before relying on exact queue names, result-key formats, or expiration times, as these details can change between implementations.
 
 ## Validation Results
 
-Results from the local development cluster. They are not production performance guarantees.
+The following measurements and checks were collected from the local Docker Desktop Kubernetes environment. They demonstrate local functionality and are not production performance guarantees.
 
-| Area | Result |
+### Measured Inference Latency
+
+![Measured inference latency across models](docs/inference_latency.png)
+
+*Benchmark conditions: 10 sequential requests per model, CPU inference, a single worker, and local Docker Desktop Kubernetes.*
+
+| Model | Mean latency (ms) | Median latency (ms) | Maximum latency (ms) |
+|---|---:|---:|---:|
+| DistilBERT | 74.77 | 73.21 | 102.89 |
+| YOLOv8n | 178.75 | 162.95 | 272.01 |
+| TinyLlama 1.1B | 1930.22 | 1953.18 | 2781.89 |
+
+These measurements show that latency differs substantially across the three workloads. TinyLlama has a higher inference latency than DistilBERT and YOLOv8n in this local CPU-based test.
+
+The maximum is reported rather than p95 because the benchmark contains only ten observations per model. With such a small sample, a percentile estimate is not a robust characterization of tail latency.
+
+The results should not be interpreted as concurrent-load performance, throughput capacity, or a comparison with GPU inference.
+
+Raw benchmark data is available in:
+
+```text
+benchmark_v3_repeated_results.csv
+```
+
+Confirm the location of this file in the current repository before using the path in scripts or external reports.
+
+### Functional Validation
+
+| Validation area | Recorded result |
 |---|---|
-| DistilBERT | Successful inference |
-| YOLOv8n | Successful inference; 5 detections on the test image (4 people, 1 bus) |
-| TinyLlama | Generation completed; output quality varies with request and runtime |
-| Prometheus targets | Gateway, worker 1, and worker 2 all reported up |
-| Scheduler | Returned `metrics_source: "prometheus"` |
-| Metrics Server | `kubectl top` worked |
-| HPA | Scale-up and scale-down observed; final state had 2 ready replicas |
-| Gateway health | Healthy, Redis connected, 3 model artifacts registered |
+| API gateway | Health endpoint responded successfully |
+| Model registry | Three registered models and available artifacts were reported |
+| DistilBERT inference | Sentiment inference completed successfully |
+| YOLOv8n inference | Object detection completed successfully; five detections were returned for the tested 810 +ù 1080 image |
+| TinyLlama inference | Text-generation request completed successfully |
+| Prometheus targets | Gateway, worker-1, and worker-2 targets reported `UP` |
+| Scheduler metrics | Prometheus metrics source was reported in tested inference responses |
+| Worker distribution | Requests were observed across two workers |
+| Kubernetes autoscaling | A second worker replica became ready during a recorded high-CPU test |
+| Pod stability | The final recorded inspection reported zero restarts for the inspected pods |
 
-Raw evidence is in [`evidence/final-20261027-232859/`](evidence/final-20261027-232859/).
+These results describe the recorded local validation runs. They do not guarantee that the same replica count, resource usage, latency, or pod status will be observed on every restart or workload.
 
-**Reading the benchmarks:** Sequential latency numbers are not sustained throughput under concurrent load. Synthetic scheduler experiments use proxy costs and should not be read as real-world scheduling performance.
+### Monitoring Evidence
 
-## Limitations and Future Work
+The following screenshots document the API and observability checks.
 
-### Current limitations
+#### 1. Swagger API Documentation
 
-- Local, small-scale cluster (1 to 2 worker replicas)
-- Scheduler comparisons so far use synthetic proxy costs
-- No sustained concurrent-load throughput measurements
-- HPA validates a CPU-based scaling path, not an optimized strategy
-- Dashboard and alert coverage depend on the deployed configuration
-- No GPU or multi-node results
+![Swagger API documentation](docs/swagger_api.jpeg)
 
-### Future research directions
+The Swagger interface displays the platform endpoints for health checks, model discovery, and inference.
 
-1. Compare round-robin, queue-based, resource-aware, and adaptive policies under identical workloads.
-2. Measure real worker queues, resource use, and inference latency.
-3. Quantify scheduling overhead and its effect on end-to-end latency.
-4. Repeat experiments across concurrency levels and workload mixes.
-5. Report throughput, p50/p95/p99 latency, error rate, and resource consumption.
-6. Study the interaction between scheduling decisions and HPA reaction time.
-7. Add validated dashboards and alerting rules.
-8. Test other model combinations and hardware.
-9. Test worker failure and recovery.
-10. Only claim adaptive-scheduling benefits after beating simpler baselines.
+#### 2. Grafana Dashboard
 
-## Conclusion
+![Grafana dashboard](docs/grafana_dashboard.jpeg)
 
-The platform integrates FastAPI, a metrics-aware scheduler, ONNX Runtime, llama.cpp, Docker, Kubernetes, Prometheus, Grafana, Redis, and HPA into one working stack for heterogeneous model serving. The open research question is whether metric-informed worker selection measurably beats simpler policies, which requires controlled experiments, real runtime measurements, and transparent reporting.
+The dashboard visualizes inference requests, end-to-end duration, gateway HTTP activity, and worker inference requests.
 
-## Author
+#### 3. Prometheus Scrape Targets
 
-**B. Indira Priyadarshini** Â· [@BVIPD](https://github.com/BVIPD)
+![Prometheus targets](docs/prometheus_targets.jpeg)
+
+The targets page shows the configured gateway and worker endpoints and their scrape status during the recorded check.
+
+#### 4. Prometheus Target Availability Query
+
+![Prometheus up query](docs/prometheus_up_query.jpeg)
+
+The `up` query returned successful target values for the gateway and both workers in the captured validation.
+
+#### 5. Gateway Inference Requests
+
+![Gateway inference requests](docs/gateway_inference_requests.jpeg)
+
+The Prometheus query shows gateway inference request counters by model and outcome for the captured state.
+
+#### 6. Worker Inference Requests
+
+![Worker inference requests](docs/worker_inference_requests.jpeg)
+
+The worker metrics show inference request counters associated with the two worker instances and their model labels.
+
+#### 7. Worker Distribution Plot
+
+![Worker distribution](worker_distribution.png)
+
+The worker distribution plot is included as a repository artifact. Interpret it using the experiment and CSV data that produced it; the plot alone does not establish general scheduling superiority.
+
+## Synthetic Scheduler Experiments
+
+The repository includes synthetic scheduler evaluations that compare different worker-selection policies using simulated scenarios and proxy costs.
+
+One recorded experiment used seed 42 and 1,000 synthetic scenarios.
+
+| Scheduling policy | Mean proxy cost |
+|---|---:|
+| Round robin | 2.678 |
+| Queue-only | 2.131 |
+| Resource-only | 2.457 |
+| Adaptive | 2.259 |
+
+In this experiment, **queue-only scheduling achieved the lowest mean proxy cost**, followed by adaptive scheduling.
+
+This result is important: the experiment does not establish that the adaptive policy is universally superior. It shows that the relative performance depends on the workload, metric definitions, policy configuration, and evaluation methodology.
+
+The proxy costs are not measured inference latencies. They should not be compared directly with the measured model latency table.
+
+Local scheduler decision overhead was reported in the range of approximately 0.0005GÇô0.0027 ms per decision for the evaluated setup, excluding HTTP communication and model inference. This is an experiment-specific result, not a general performance guarantee.
+
+See the scheduler experiment and evaluation scripts and their corresponding CSV artifacts for the methodology and results.
+
+## Limitations
+
+The current project is a local cloud-native prototype and has several limitations.
+
+- **Hardware:** The reported inference benchmark uses CPU inference in a local environment.
+- **Sample size:** The repeated latency benchmark contains ten sequential requests per model.
+- **Concurrency:** The latency benchmark does not establish performance under concurrent or sustained high-volume traffic.
+- **Scheduler evaluation:** Synthetic proxy-cost experiments do not prove that adaptive scheduling outperforms all baseline policies under real workloads.
+- **Autoscaling:** The tested HPA configuration has a maximum of two replicas and is not a large-scale capacity evaluation.
+- **Redis durability:** The configured in-memory Redis setup should not be treated as durable job storage.
+- **Production readiness:** Authentication, authorization, TLS, durable job recovery, comprehensive failure handling, and production deployment hardening require separate assessment.
+- **Generalization:** Results from Docker Desktop Kubernetes may differ from results on a multi-node production cluster.
+
+## Future Enhancements
+
+Potential next steps include:
+
+- Evaluate scheduler policies under controlled concurrent workloads.
+- Increase benchmark repetitions and report robust latency percentiles.
+- Measure throughput, queue waiting time, CPU utilization, memory usage, and end-to-end latency together.
+- Compare adaptive scheduling with FCFS, priority-based, queue-only, and resource-only baselines.
+- Improve scheduler behavior when metrics are missing or stale.
+- Evaluate scaling behavior with more worker replicas.
+- Add automated benchmark collection and reproducible result generation.
+- Strengthen Redis recovery and request-failure handling.
+- Add authentication, secure configuration management, and deployment hardening.
+- Evaluate the platform on a multi-node Kubernetes cluster.
+
+## Reproducibility
+
+The repository contains the application code, deployment configuration, experiment scripts, benchmark data, and supporting evidence needed to inspect the implementation.
+
+For reproducible experiments:
+
+1. Record the code revision and deployment configuration.
+2. Record model artifacts and versions.
+3. Document CPU, memory, and Kubernetes resource limits.
+4. Specify request payloads, warm-up behavior, and repetition counts.
+5. Preserve raw measurements and experiment parameters.
+6. Distinguish measured inference results from synthetic scheduler simulations.
+7. Record the Prometheus metrics and scheduling policy configuration used for each run.
+
+Model artifacts and third-party dependencies remain subject to their respective licenses.
 
 ## License
 
-No license has been selected. Unless one is added, standard copyright restrictions apply.
+This project is released under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Bhuvanagiri Indira Priyadarshini.
+
+The MIT License applies to this project's code and associated materials covered by the license. Third-party dependencies and model weights retain their respective licenses and terms.
