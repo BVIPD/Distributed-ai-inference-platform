@@ -82,51 +82,50 @@ Redis provides request queueing and result storage as implemented by the applica
 
 ```text
 Distributed-ai-inference-platform/
-Göé
-Gö£GöÇGöÇ development_v3/
-Göé   Gö£GöÇGöÇ main.py
-Göé   Gö£GöÇGöÇ router.py
-Göé   Gö£GöÇGöÇ scheduler.py
-Göé   Gö£GöÇGöÇ models.py
-Göé   Gö£GöÇGöÇ model_registry.py
-Göé   Gö£GöÇGöÇ worker_api.py
-Göé   Gö£GöÇGöÇ Dockerfile
-Göé   Gö£GöÇGöÇ requirements.txt
-Göé   Gö£GöÇGöÇ kubernetes-v3.yaml
-Göé   Gö£GöÇGöÇ kubernetes-v3.1.yaml
-Göé   Gö£GöÇGöÇ worker-deployment-final.yaml
-Göé   Gö£GöÇGöÇ hpa-final-evidence.yaml
-Göé   Gö£GöÇGöÇ metrics-server-patch.yaml
-Göé   Gö£GöÇGöÇ redis.yaml
-Göé   Gö£GöÇGöÇ prometheus.yaml
-Göé   Gö£GöÇGöÇ grafana.yaml
-Göé   Gö£GöÇGöÇ openapi-live.json
-Göé   Gö£GöÇGöÇ Architecture.png
-Göé   GööGöÇGöÇ models/
-Göé
-Gö£GöÇGöÇ docs/
-Göé   Gö£GöÇGöÇ inference_latency.png
-Göé   Gö£GöÇGöÇ swagger_api.jpeg
-Göé   Gö£GöÇGöÇ grafana_dashboard.jpeg
-Göé   Gö£GöÇGöÇ prometheus_targets.jpeg
-Göé   Gö£GöÇGöÇ prometheus_up_query.jpeg
-Göé   Gö£GöÇGöÇ gateway_inference_requests.jpeg
-Göé   GööGöÇGöÇ worker_inference_requests.jpeg
-Göé
-Gö£GöÇGöÇ evidence/
-Göé   GööGöÇGöÇ final-20261027-232859/
-Göé
-Gö£GöÇGöÇ benchmark.py
-Gö£GöÇGöÇ benchmark_results.csv
-Gö£GöÇGöÇ scheduler_experiment.py
-Gö£GöÇGöÇ scheduler_independent_eval.py
-Gö£GöÇGöÇ scheduler_comparison.csv
-Gö£GöÇGöÇ scheduler_independent_eval.csv
-Gö£GöÇGöÇ deployment.yaml
-Gö£GöÇGöÇ Dockerfile
-Gö£GöÇGöÇ requirements.txt
-Gö£GöÇGöÇ LICENSE
-GööGöÇGöÇ README.md
+â”œâ”€â”€ development_v3/
+â”‚   â”œâ”€â”€ main.py
+â”‚   â”œâ”€â”€ router.py
+â”‚   â”œâ”€â”€ scheduler.py
+â”‚   â”œâ”€â”€ models.py
+â”‚   â”œâ”€â”€ model_registry.py
+â”‚   â”œâ”€â”€ worker_api.py
+â”‚   â”œâ”€â”€ Dockerfile
+â”‚   â”œâ”€â”€ requirements.txt
+â”‚   â”œâ”€â”€ kubernetes-v3.yaml
+â”‚   â”œâ”€â”€ kubernetes-v3.1.yaml
+â”‚   â”œâ”€â”€ worker-deployment-final.yaml
+â”‚   â”œâ”€â”€ hpa-final-evidence.yaml
+â”‚   â”œâ”€â”€ metrics-server-patch.yaml
+â”‚   â”œâ”€â”€ redis.yaml
+â”‚   â”œâ”€â”€ prometheus.yaml
+â”‚   â”œâ”€â”€ grafana.yaml
+â”‚   â”œâ”€â”€ openapi-live.json
+â”‚   â”œâ”€â”€ Architecture.png
+â”‚   â””â”€â”€ models/
+â”‚
+â”œâ”€â”€ docs/
+â”‚   â”œâ”€â”€ inference_latency.png
+â”‚   â”œâ”€â”€ swagger_api.jpeg
+â”‚   â”œâ”€â”€ grafana_dashboard.jpeg
+â”‚   â”œâ”€â”€ prometheus_targets.jpeg
+â”‚   â”œâ”€â”€ prometheus_up_query.jpeg
+â”‚   â”œâ”€â”€ gateway_inference_requests.jpeg
+â”‚   â””â”€â”€ worker_inference_requests.jpeg
+â”‚
+â”œâ”€â”€ evidence/
+â”‚   â””â”€â”€ final-20261027-232859/
+â”‚
+â”œâ”€â”€ benchmark.py
+â”œâ”€â”€ benchmark_results.csv
+â”œâ”€â”€ scheduler_experiment.py
+â”œâ”€â”€ scheduler_independent_eval.py
+â”œâ”€â”€ scheduler_comparison.csv
+â”œâ”€â”€ scheduler_independent_eval.csv
+â”œâ”€â”€ deployment.yaml
+â”œâ”€â”€ Dockerfile
+â”œâ”€â”€ requirements.txt
+â”œâ”€â”€ LICENSE
+â””â”€â”€ README.md
 ```
 
 The `development_v3/` directory contains the newer inference implementation and Kubernetes-related configuration. Root-level files preserve the earlier prototype and supporting experiments.
@@ -165,15 +164,17 @@ A typical model directory may look like this:
 
 ```text
 development_v3/
-GööGöÇGöÇ models/
-    Gö£GöÇGöÇ distilbert/
-    Göé   Gö£GöÇGöÇ model_quantized.onnx
-    Göé   Gö£GöÇGöÇ tokenizer.json
-    Göé   GööGöÇGöÇ config.json
-    Gö£GöÇGöÇ yolo/
-    Göé   GööGöÇGöÇ yolov8n.onnx
-    GööGöÇGöÇ tinyllama/
-        GööGöÇGöÇ TinyLlama-1.1B-Chat-v1.0-Q2_K.gguf
+â””â”€â”€ models/
+    â”œâ”€â”€ distilbert/
+    â”‚   â”œâ”€â”€ model_quantized.onnx
+    â”‚   â”œâ”€â”€ tokenizer.json
+    â”‚   â””â”€â”€ config.json
+    â”‚
+    â”œâ”€â”€ yolo/
+    â”‚   â””â”€â”€ yolov8n.onnx
+    â”‚
+    â””â”€â”€ tinyllama/
+        â””â”€â”€ TinyLlama-1.1B-Chat-v1.0-Q2_K.gguf
 ```
 
 **Important:** Treat this as an illustrative layout. Confirm the exact filenames, directories, tokenizer requirements, and model identifiers against the current `development_v3/models.py` and the actual worker configuration before downloading or moving files.
@@ -450,7 +451,7 @@ Confirm the location of this file in the current repository before using the pat
 | API gateway | Health endpoint responded successfully |
 | Model registry | Three registered models and available artifacts were reported |
 | DistilBERT inference | Sentiment inference completed successfully |
-| YOLOv8n inference | Object detection completed successfully; five detections were returned for the tested 810 +ù 1080 image |
+| YOLOv8n inference | Object detection completed successfully; five detections were returned for the tested 810 +ï¿½ 1080 image |
 | TinyLlama inference | Text-generation request completed successfully |
 | Prometheus targets | Gateway, worker-1, and worker-2 targets reported `UP` |
 | Scheduler metrics | Prometheus metrics source was reported in tested inference responses |
@@ -525,7 +526,7 @@ This result is important: the experiment does not establish that the adaptive po
 
 The proxy costs are not measured inference latencies. They should not be compared directly with the measured model latency table.
 
-Local scheduler decision overhead was reported in the range of approximately 0.0005GÇô0.0027 ms per decision for the evaluated setup, excluding HTTP communication and model inference. This is an experiment-specific result, not a general performance guarantee.
+Local scheduler decision overhead was reported in the range of approximately 0.0005Gï¿½ï¿½0.0027 ms per decision for the evaluated setup, excluding HTTP communication and model inference. This is an experiment-specific result, not a general performance guarantee.
 
 See the scheduler experiment and evaluation scripts and their corresponding CSV artifacts for the methodology and results.
 
