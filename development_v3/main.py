@@ -2,7 +2,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, make_asgi_app
 from pydantic import BaseModel, Field, model_validator
 
@@ -57,6 +57,10 @@ async def lifespan(app: FastAPI):
         stop_queue_consumer()
 
 
+# ---------------------------------------------------------------------
+# FastAPI application
+# ---------------------------------------------------------------------
+
 app = FastAPI(
     title="Distributed Multi-Model AI Inference Fabric",
     description=(
@@ -69,6 +73,24 @@ app = FastAPI(
 
 
 # ---------------------------------------------------------------------
+# CORS configuration
+# Allows the local and deployed project websites to access the API.
+# ---------------------------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:8080",
+        "http://localhost:8080",
+        "https://tourmaline-gelato-f80707.netlify.app",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+
+
+# ---------------------------------------------------------------------
 # Request schema
 # ---------------------------------------------------------------------
 
@@ -77,12 +99,14 @@ class InferenceRequest(BaseModel):
         ...,
         description="Registered model identifier: bert, yolo, or llama.",
     )
+
     priority: int = Field(
         default=1,
         ge=1,
         le=10,
         description="Scheduling priority from 1 to 10.",
     )
+
     text: str | None = None
     image_base64: str | None = None
 
@@ -109,7 +133,7 @@ class InferenceRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------
-# HTTP request metrics
+# HTTP request metrics middleware
 # ---------------------------------------------------------------------
 
 @app.middleware("http")
@@ -168,6 +192,7 @@ def health():
         redis_status = "unavailable"
 
     registered_models = list_models()
+
     available_models = sum(
         1 for model in registered_models if model["artifact_exists"]
     )
@@ -258,13 +283,14 @@ def infer(request: InferenceRequest):
 
     finally:
         INFERENCE_REQUESTS.labels(model, status).inc()
+
         INFERENCE_DURATION.labels(model).observe(
             time.perf_counter() - start
         )
 
 
 # ---------------------------------------------------------------------
-# Prometheus endpoint
+# Prometheus metrics endpoint
 # ---------------------------------------------------------------------
 
 app.mount("/metrics", make_asgi_app())

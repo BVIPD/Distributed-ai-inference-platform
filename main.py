@@ -4,7 +4,6 @@ from router import route_request
 
 app = FastAPI()
 
-
 @app.get("/")
 def home():
     return {"message": "AI Inference Platform Running"}
